@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TKMChain Explorer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/plugin/relativeTime.js"></script>
+  <script>dayjs.extend(dayjs_plugin_relativeTime)</script>
+
+
+  <style>
+    :root {
+      --bg: #0f121a;
+      --surface: #161b22;
+      --text: #e6edf3;
+      --text-secondary: #8b949e;
+      --accent: #58a6ff;
+      --accent-dark: #388bfd;
+      --border: #30363d;
+      --success: #3fb950;
+      --danger: #f85149;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.5rem 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    .search-bar {
+      display: flex;
+      gap: 0.5rem;
+      max-width: 420px;
+      width: 100%;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 0.75rem 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(88,166,255,0.2);
+    }
+
+    button {
+      padding: 0.75rem 1.25rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: var(--accent-dark);
+      transform: translateY(-1px);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .blocks-table {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 1rem 1.25rem;
+      text-align: left;
+    }
+
+    th {
+      background: #0d1117;
+      color: var(--text-secondary);
+      font-weight: 500;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    tr {
+      border-bottom: 1px solid var(--border);
+    }
+
+    tr:last-child {
+      border-bottom: none;
+    }
+
+    td {
+      font-size: 0.95rem;
+    }
+
+    .hash {
+      font-family: 'Courier New', Courier, monospace;
+      color: var(--accent);
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .hash:hover {
+      color: #79c0ff;
+      text-decoration: underline;
+    }
+
+    .miner {
+      color: #f0883e;
+    }
+
+    .time-ago {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 4rem 0;
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+    }
+
+    .error {
+      background: rgba(248,81,73,0.15);
+      border: 1px solid rgba(248,81,73,0.4);
+      color: #f85149;
+      padding: 1rem;
+      border-radius: 6px;
+      margin: 1.5rem 0;
+      text-align: center;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container header-content">
+    <h1>TKMChain Explorer</h1>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Block number / hash / transaction hash..." />
+      <button onclick="search()">Search</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="stats" id="stats">
+    <!-- Filled by JavaScript -->
+  </div>
+
+  <div id="error" class="error" style="display:none"></div>
+
+  <div class="blocks-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Height</th>
+          <th>Hash</th>
+          <th>Miner</th>
+          <th>Txs</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody id="blocksBody"></tbody>
+    </table>
+  </div>
+
+  <div class="loading" id="loading">Loading latest blocks...</div>
+
+</div>
+
+<footer>
+  TKMChain • Proof-of-Stake • Last updated <span id="lastUpdate">just now</span>
+</footer>
+
+<script>
+  const RPC_URL = "http://45.87.80.81:8089/rpc";  
+  const BLOCKS_TO_SHOW = 20;
+
+  async function rpc(method, params = []) {
+    try {
+      const response = await axios.post(RPC_URL, {
+        jsonrpc: "2.0",
+        method,
+        params,
+        id: 1
+      });
+      if (response.data.error) throw new Error(response.data.error.message);
+      return response.data.result;
+    } catch (err) {
+      console.error(err);
+      showError("RPC connection failed: " + err.message);
+      return null;
+    }
+  }
+
+  function showError(msg) {
+    const el = document.getElementById("error");
+    el.textContent = msg;
+    el.style.display = "block";
+  }
+
+  function formatHash(hash) {
+    if (!hash) return "—";
+    return hash.slice(0,10) + "..." + hash.slice(-8);
+  }
+
+  function formatAddress(addr) {
+    if (!addr) return "—";
+    return addr.slice(0,8) + "..." + addr.slice(-6);
+  }
+
+  async function loadChainStats() {
+    const latest = await rpc("eth_blockNumber");
+    if (!latest) return;
+
+    const height = parseInt(latest, 16);
+
+    document.getElementById("stats").innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Latest Block</div>
+        <div class="stat-value">#${height.toLocaleString()}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Network</div>
+        <div class="stat-value">TKMChain PoS</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Last Update</div>
+        <div class="stat-value" id="lastUpdate">just now</div>
+      </div>
+    `;
+
+    document.getElementById("lastUpdate").textContent = dayjs().fromNow();
+  }
+
+  async function loadLatestBlocks() {
+    const loading = document.getElementById("loading");
+    const tbody = document.getElementById("blocksBody");
+
+    loading.style.display = "block";
+    tbody.innerHTML = "";
+
+    const latestHex = await rpc("eth_blockNumber");
+    if (!latestHex) return;
+
+    const latest = parseInt(latestHex, 16);
+    const start = Math.max(0, latest - BLOCKS_TO_SHOW + 1);
+
+    for (let i = latest; i >= start; i--) {
+      const block = await rpc("eth_getBlockByNumber", ["0x" + i.toString(16), true]);
+      if (!block) continue;
+
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><strong>${parseInt(block.number, 16).toLocaleString()}</strong></td>
+        <td><span class="hash" onclick="copyToClipboard('${block.hash}')">${formatHash(block.hash)}</span></td>
+        <td><span class="miner">${formatAddress(block.miner)}</span></td>
+        <td>${block.transactions?.length || 0}</td>
+        <td><span class="time-ago">${dayjs.unix(parseInt(block.timestamp, 16)).fromNow()}</span></td>
+      `;
+      tbody.appendChild(row);
+    }
+
+    loading.style.display = "none";
+  }
+
+  function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert("Copied: " + text);
+    });
+  }
+
+  async function search() {
+    const input = document.getElementById("searchInput").value.trim();
+    if (!input) return;
+
+    if (/^0x[a-fA-F0-9]{64}$/.test(input)) {
+      // probably block hash or tx hash
+      const block = await rpc("eth_getBlockByHash", [input, true]);
+      if (block) {
+        alert("Found block #" + parseInt(block.number, 16));
+        // You could redirect or show modal here
+        return;
+      }
+
+      const tx = await rpc("eth_getTransactionByHash", [input]);
+      if (tx) {
+        alert("Found transaction: " + input);
+        return;
+      }
+
+      showError("Nothing found for this hash");
+    } else if (/^\d+$/.test(input)) {
+      // block number
+      const num = parseInt(input);
+      const block = await rpc("eth_getBlockByNumber", ["0x" + num.toString(16), true]);
+      if (block) {
+        alert("Found block #" + num);
+        return;
+      }
+      showError("Block not found");
+    } else {
+      showError("Invalid input — use block number or 0x... hash");
+    }
+  }
+
+  // Initial load
+  async function init() {
+    await loadChainStats();
+    await loadLatestBlocks();
+
+    // Auto-refresh every 12 seconds (block time)
+    setInterval(async () => {
+      await loadChainStats();
+      await loadLatestBlocks();
+    }, 12000);
+  }
+
+  window.onload = init;
+</script>
+</body>
+</html>
